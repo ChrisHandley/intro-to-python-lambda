@@ -1,271 +1,180 @@
 ---
-title: Python Flask Fundamentals
+title: CloudFormation Fundamentals
 teaching: 10
 exercises: 10
 questions:
-- "What is Flask?"
-- "How can I create a simple Flask app?"
-- "How do I prepare it for extension?"
+- "What is the SAM Template"
+- "Why do we use it" 
 objectives:
-- "Build your first Flask app"
+- "Build resource definitions"
+- "Basics of Infrastructure as Code"
 keypoints:
-- "Flask is a microframework running in Python."
-- "Django is similar but not minimal."
-- "Chalice is the AWS equivalent that supports AWS specifics."
+- "A lot is often boilerplate"
 ---
 
-## Flask - What is it
+## Getting Started
 
-Flask is a means to create endpoints and webapps. It is a microframework.
-
-It does not force you towards certain methods e.g. databases.
-
-Flask is used by Pintrest and LinkedIn.
-
-A lot can be done with just Flask. But further libraries will extend what you can do- while Django is similar in aims but comes with a lot more assest making such apps bigger, and forces your hand on certain options.
-
-Included in Flask are the components:
-
-- Werkzeug - a WGSI toolkit
-- Jinja a template engine
-- MarkupSafe -  a string handling library
-- ItsDangerous - a data serialization library. Used to store the session of the Flask app in a cookie in a safe way.
-
-## Installation (Ubuntu or Linux like Environment)
 
 ~~~
-sudo apt install python
+mkdir dojo-python-lambda
+
+cd dojo-python-lambda
+
+sam init
 ~~~
 {: .language-bash}
 
-This installs python.
+With sam-init select option 1.
+
+Then select the Hello World Example
+
+Select No for the runtime option.
+
+Then select option 9 - Python3.9
+
+Then select option 1 - zip
+
+Then just press enter for the default application name.
+
+## The sam-app structure
+
+Within the `sam-app` directory we have a few files and directories.
+
+sam-app/
+├── hello_world
+│   ├── __init__.py
+|   ├── app.py
+│   └── requirements.txt
+├── events
+|   └── events.json
+├── tests
+│   ├── __init__.py
+│   ├── requirements.txt
+│   ├── integration
+|   |   ├── __init__.py
+|   |   └── test_handler.py
+|   └── unit
+|       ├── __init__.py
+|       └── test_api_gateway.py
+├── __init__.py
+├── template.yaml
+└── README.md
+
+The first thing we will need to do is activate the premade environment.
 
 ~~~
-sudo pip3 install virtualenv
-~~~
-{: .language-bash}
+source env/bin/activate
 
-This installs the environment manager we shall use.
-
-On Windows, using WSL, once you make the directory, go into it and then activate VS Code
-
-~~~
-code .
-~~~
-{: .language-bash}
-
-If using WSL and VS Code, you will want a few extensions installed.
-
-- WSL (allows VS Code to interact with the Linux Subsystem)
-- Python
-- PyLance
-
-## Setup
-
-Using the IDE create a file, microblog.py.
-
-With that file created we need to set up the environment. In the terminal of VS Code,
-
-~~~
-virtualenv --python=python3.8 .env
-
-source .env/bin/activate
-~~~
-{: .language-bash}
-
-You will note the command line has changed to denote the environment is active.
-
-To aid with linting and interpretation by the IDE, we need to select the environment being used.
-
-In the bottom right, next to Language (wehn we are viewing a python file), select the environment displayed, that will open the palette and from there select the interpreter (some are preloaded, for this yours is ./env/bin/python)
-
-Then on the command line we can isntall new libraries to the environment
-
-~~~
-pip install flask
+pip list
 ~~~
 {: .language-bash}
 
-## Hello World
-~~~
-from flask import Flask
-app = Flask(__name__)
+Using pip list we can see we have a few things preinstalled for us. Notably aws lambda powertools, aws xray sdk, and boto3. These are libraries for enabling debugging and tracing of lambda actions in the cloud, and boto3 is a python library that has apis for many AWS services such as S3, EC2, Glue, and Athena.
 
-@app.route("/")
-def hello() -> str:
-    return "Hello World"
+## Build and Locally Run Lambda
 
-
-if __name__ == "__main__":
-    app.run(debug=False)
-~~~
-{: .language-python}
-
-
-What does the above mean?
-
-First we import from the `flask` library the `Flask` class.
-
-Then to the app variable we associate an instance of Flask. __name__ is the current name of the module we are building within.
-
-@app.route() is a decorator. This will associate to an URL serviced by the app some code, in our case the function hello().
-
-In this case the function is defined with '->'. This is an annotation. In this case a string class. So we can use this to find out what a function is taking as inputs and returning.
-
-The line checking is __name__ is identical to "__main__" is checking the variable is the same as __main__. So if this were a module being imported that would not be the case. In our example it is so app.run(debug=false) is run. This starts the app.
-
-To run the Flask app we can either;
+Core to our Lambda function is that infrastructure is code. And this the `template.yaml`
 
 ~~~
-$ python3 microblog.py
-~~~
-{: .terminal}
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Sample SAM Template for powertools-quickstart
+Globals:
+    Function:
+        Timeout: 3
+    Api:
+      TracingEnabled: true
 
-or
+Parameters:
+    DomainName:
+        Type: String
+        Default: something-api.equansdev.leighton.com
 
-~~~
-$ export FLASK_APP=microblog.py
-$ flask run
-~~~
-{: .terminal}
 
-The latter is performed in the directory and is looking for microblog.py. Flask can be run with other keywords other than run.
+Resources:
+    HelloWorldApiGateway:
+        Type: AWS::Serverless::Api
+        Properties:
+            StageName: Staging
+            Domain:
+                DomainName: !Sub ${DomainName}
+                CertificateArn: arn:aws:acm:eu-west-2:002648961906:certificate/d304e229-f5b5-4521-996d-9f97e4edbbb3
+                Route53:
+                    HostedZoneId: Z06336463BM3WEGI8CG1U
+                
 
-Doing so produces in the terminal the following
 
-~~~
-(flask-vue) chandley@LTW017:~/hello-world-flask$ flask run
- * Environment: production
-   WARNING: This is a development server. Do not use it in a production deployment.
-   Use a production WSGI server instead.
- * Debug mode: off
- * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
-~~~
-{: .output}
-
-We could add more routes to the app.
-
-~~~
-from flask import Flask, request
-app = Flask(__name__)
-
-@app.route("/")
-def hello() -> str:
-    return "Hello World"
-
-@app.route("/test", methods=['POST'])
-def respond():
-    content = request.json
-    body = {
-        "message": "Go Serverless v1.0! Your function executed successfully!",
-        "input": content
-    }
-
-    response = {
-        "statusCode": 200,
-        "body": content['value']
-    }
-
-    return response
-
-if __name__ == "__main__":
-    app.run(debug=False)
-~~~
-{: .language-python}
-
-Using Postman we can send the json file payload to our endpoint http://127.0.0.1:5000/test, and the response is the
-`value` in content in the response. In Postman define a POST wto the above URL, with the Body, as JSON format, as {"value": "test"} and send it.
+    HelloWorldFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            FunctionName: EquansHelloWorld
+            CodeUri: hello_world/
+            Handler: app.lambda_handler
+            Runtime: python3.9
+            Tracing: Active
+            Events:
+                HelloWorld:
+                    Type: Api
+                    Properties:
+                        
+                        Path: /hello
+                        Method: get
+                        RestApiId:
+                            Ref: HelloWorldApiGateway
 
 ~~~
-{
-    "body": "test",
-    "statusCode": 200
-}
-~~~
-{: .output}
+{: .language-yaml}
 
-The decorator to our `respond` function has the methods attribute of POST. This informs the endpoint it can receive a payload.
+Let's break this down.
 
-Request takes the payload, a json, and only a json, and processes it to content where is is held as a dictionary. The content of the json is accessed using `content` as the object and `value` as the key.
+The head of the file establishes the Template Format Version and how the yaml is translated and interpreted by Cloudformation. This is boilerplate and we leave it as is.
 
-> ## Better File Structure?
->
-> How do we improve the file structure?
-> Can we improve the way we import our routes?
->
-> > ## Solution 
-> > ~~~
-> > microapp/
-> > ├── app
-> > │   ├── __init__.py
-> > │   └── routes.py
-> > └── microblog.py
-> > ~~~
-> > {: .terminal}
-> > 
-> > The routes are split out from the main application
-> > as it makes it much easier to then have the routes for each endpoint
-> > in their own folder.
-> >
-> > microblog.py now contains just the following.
-> >
-> > ~~~
-> > from app import app
-> > 
-> > if __name__ == "__main__":
-> >     app.run(debug=False)
-> > ~~~
-> > {: .language-python}
-> >
-> > A bit confusing, but what is happening is from the app folder the app instance is being imported.
-> >
-> > In the app folder we define `__init__.py` to contain the following. It creates an instance of the python app, and then imports the routes.
-> >
-> > Take care of the linters used. In VS Code some are aggressive and upon saving will move the routes import to the top of the file, creating
-> > an error.
-> >
-> > ~~~
-> > from flask import Flask
-> > 
-> > app = Flask(__name__)
-> > 
-> > from app import routes
-> > ~~~
-> > {: .language-python}
-> > 
-> > The `__init__.py` file informs python the the files in the folder can be imported as modules
-> > and can be left empty. If it is not, then it is preparing other things, like our app, that can then
-> > be imported elsewhere.
-> >
-> > routes.py (and any file with routes in it as it can now be split up over multiple files and imported separately) has our routes.
-> >
-> > ~~~
-> > from app import app
-> > from flask import request
-> > 
-> > @app.route("/")
-> > def hello() -> str:
-> >     return "Hello World"
-> > 
-> > @app.route("/test", methods=['POST'])
-> > def respond():
-> >     content = request.json
-> >     body = {
-> >         "message": "Go Serverless v1.0! Your function executed successfully!",
-> >         "input": content
-> >     }
-> > 
-> >     response = {
-> >         "statusCode": 200,
-> >         "body": content['value']
-> >     }
-> >     return response
-> > ~~~
-> > {: .language-python}
-> > 
-> > Here we again import the app instance from the app folder.
-> > Then we define some of our routes. Routes could be defined elsewhere and imported in a similar manner
-> > but then you must still import app from from app for the decorator to work
-> {: .solution}
+The Description is just a string, where we describe what is being built by the template.
+
+We then define some `Globals` parameters. These set common configurations for resource types, while within a resource you can define more specifics. In this case we set the timeout time for the functions, and for the Api we set that tracing is enabled.
+
+`Parameters` is where we can define some parameters that are used within the template. We can define them here and set defaults, as these values can be specified as part of the SAM deploy CLI command e.g. in our example the `DomainName` is has a `Type` and a `Default`. In essence this is like defining environment variables for the CloudFormation template.
+
+`Resources` is where we begin to define the resources that build our service. This consists of functions, S3 buckets, queues, api gateways, and more. For this tutorial we will focus just on two types that allow us to build our Serverless function.
+
+## Lambda Function
+
+White space in our yaml file matters. So note the tab indentations.
+
+Our function is first defined with a name. This is a logical name that we can use in the template when we need to reference the function, as this doesn't need to be the same as the resource name, which must be unique on the AWS platform account. Generally each setting/property/thing is define by the name of it, and a colon.
+
+With the name define we assert the `Type`, which is in this case the `AWS::Serverless::Function`.
+
+This particular type of service is then defined by `Properties`. The first is the `FunctionName` which is a unique name for the function on the AWS account. The `CodeUri` is the location in the local space where the code is deployed to, where the Lambda function is found.
+
+The `Handler` is the function name within the code that interprets the event being passed to it. Note the naming convention. In this case the code being looked for is the file `app` in the directory defined by `CodeUri`. This file in our case is a python file. In that python file the Lambda function is called lambda_handler and so to reference that function we use the file name and function name concatenated by a dot. e.g. `app.lambda_handler`.
+
+`Runtime` defines for CloudFormation what language the code is in and what basics to use for intepreting the code. In this case, python 3.9. `Tracing` is Active so we can trace and track events, i.e. see when this function is invoked. This is critical in very large services where many functions are being invoked, and AWS can track these and procude pathways of events as they trigger lambdas that trigger other functions or resources.
+
+### Events
+
+Lambda Functions are invoked with events, that either come through some Api Gateway, or from some messaging queue, or via some other program running on AWS e.g. Elastic Beanstalk. A function can manage multiple events, and each can be given a logical name, which can be reused in the template.
+
+The event has a `Type`, which in this case is delivered by the Api. The `Properties` of the function include the `Path` that the event is passed down - the Lambda function can have multiple end points that trigger, and which is used is determined by the handler and the event - the handler is acting as a filter of the event types. `Method` defines if the function is being invoked with a Get or Post (or similar) method via HTTP. `RestApiId` is the id of the ARN, in this case a RestApi resource. It is typical, as in this case, to define the Api in the same template.
+
+## Api Gateway
+
+The Gateway is handling calls to our Lambda function by HTTP requests. Again like any resource we give it a logical name we can use elsewhere in the template. The `Type` is `AWS::Serverless::Api`, and it has properties. The `StageName` is an important property so we can define some resources to operate on our development, staging and production stages, so that different end points are available and to prevent issues with CI/CD.
+
+The `Domain` defines the URL of the Api Gateway. The `DomainName` is the url for the domain, where we wil lbe sending our requests. The `CertificateArn` is a Amazon Resource Name (ARN) of an AWS managed certificate this domain name's endpoint. AWS Certificate Manager is the only supported source. `Route53` defines Amazon Route 53 configuration. `HostedZoneId` is the ID of the hosted zone that you want to create records in. Route53 is a AWS service that provides the Domain Name System for our services. In essence we are defining how we go from connecting from a URL and thus a domain name, to get through the Api and send our request to the Lambda function or some other service.
+
+## Refering Resources
+
+We have a few ways we can access resources in our template (and outside of it), and some of these ways make our life easier and the code more compact.
+
+`!Sub ${Parameter}`
+
+This allows a paramter to be passed into a string via substitution.
+
+Alternatively we can reference the resource directly in the template and grab an attribute associated with it.
+
+`!GetAtt LogicalName.AttributeName`
+
+Finally we may just want to reference something by arn, in which cas we provide the full arn name, using the Substition and Get Attribute functions above to insert and replace parts of the arn string to form the true string.
 
 {% include links.md %}
