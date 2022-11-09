@@ -84,23 +84,20 @@ In the `template.yaml` we add a new event type to our Lambda function
                         
                         Path: /hello
                         Method: get
-                        RestApiId:
-                            Ref: HelloWorldApiGateway                     
+                  
                 
                 HelloWorldName:
                     Type: Api
                     Properties:
                         Path: /hello/{name}
-                        RestApiId:
-                            Ref: HelloWorldApiGateway  
+
 
                 ByeWorldTest:
                     Type: Api
                     Properties:
                         Path: /goodbye
                         Method: get
-                        RestApiId:
-                            Ref: HelloWorldApiGateway
+
 ~~~
 {: .language}
 

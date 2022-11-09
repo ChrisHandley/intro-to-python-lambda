@@ -24,7 +24,7 @@ sam init
 ~~~
 {: .language-bash}
 
-With sam-init select option 1.
+With sam init select option 1.
 
 Then select the Hello World Example
 
@@ -76,52 +76,47 @@ Using pip list we can see we have a few things preinstalled for us. Notably aws 
 Core to our Lambda function is that infrastructure is code. And this the `template.yaml`
 
 ~~~
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Sample SAM Template for powertools-quickstart
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
-    Function:
-        Timeout: 3
-    Api:
-      TracingEnabled: true
-
-Parameters:
-    DomainName:
-        Type: String
-        Default: something-api.equansdev.leighton.com
-
+  Function:
+    Timeout: 3
 
 Resources:
-    HelloWorldApiGateway:
-        Type: AWS::Serverless::Api
-        Properties:
-            StageName: Staging
-            Domain:
-                DomainName: !Sub ${DomainName}
-                CertificateArn: arn:aws:acm:eu-west-2:002648961906:certificate/d304e229-f5b5-4521-996d-9f97e4edbbb3
-                Route53:
-                    HostedZoneId: Z06336463BM3WEGI8CG1U
-                
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
 
-
-    HelloWorldFunction:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName: EquansHelloWorld
-            CodeUri: hello_world/
-            Handler: app.lambda_handler
-            Runtime: python3.9
-            Tracing: Active
-            Events:
-                HelloWorld:
-                    Type: Api
-                    Properties:
-                        
-                        Path: /hello
-                        Method: get
-                        RestApiId:
-                            Ref: HelloWorldApiGateway
-
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
 ~~~
 {: .language-yaml}
 
@@ -136,6 +131,8 @@ We then define some `Globals` parameters. These set common configurations for re
 `Parameters` is where we can define some parameters that are used within the template. We can define them here and set defaults, as these values can be specified as part of the SAM deploy CLI command e.g. in our example the `DomainName` is has a `Type` and a `Default`. In essence this is like defining environment variables for the CloudFormation template.
 
 `Resources` is where we begin to define the resources that build our service. This consists of functions, S3 buckets, queues, api gateways, and more. For this tutorial we will focus just on two types that allow us to build our Serverless function.
+
+`Outputs` is where we define the names of the resources made. This defines them so they can be referenced elsewhere outside of this stack.
 
 ## Lambda Function
 

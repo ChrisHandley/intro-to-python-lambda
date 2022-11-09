@@ -104,3 +104,4 @@ episode_order:
       - 01-intro
       - 02-template
       - 03-local
+      - 04-deploy
