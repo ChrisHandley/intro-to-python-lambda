@@ -105,3 +105,4 @@ episode_order:
       - 02-template
       - 03-local
       - 04-deploy
+      - 05-gateway
